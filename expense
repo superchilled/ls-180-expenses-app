@@ -11,15 +11,7 @@ class ExpenseData
   def list
     response = @expenses_app_db.exec("SELECT * FROM expenses ORDER BY created_on ASC;")
 
-    response.each do |tuple|
-      data = [
-        "#{tuple["id"].rjust(3,' ')}",
-        "#{tuple["created_on"]}",
-        "#{tuple["amount"].rjust(6,' ')}",
-        "#{tuple["memo"]}"
-      ]
-      puts data.join(' | ')
-    end
+    display_data(response)
   end
 
   def add_expense(amount, memo)
@@ -36,17 +28,21 @@ class ExpenseData
     if search_term
       sql = "SELECT * FROM expenses WHERE memo ILIKE $1;"
       response = @expenses_app_db.exec_params(sql, [search_term])
-      response.each do |tuple|
-      data = [
+      display_data(response)
+    else
+      puts 'Please incluse a search term'
+    end
+  end
+
+  def display_data(data)
+    data.each do |tuple|
+      rows = [
         "#{tuple["id"].rjust(3,' ')}",
         "#{tuple["created_on"]}",
         "#{tuple["amount"].rjust(6,' ')}",
         "#{tuple["memo"]}"
       ]
-      puts data.join(' | ')
-    end
-    else
-      puts 'Please incluse a search term'
+      puts rows.join(' | ')
     end
   end
 end
