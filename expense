@@ -2,42 +2,56 @@
 
 require "pg"
 
-expenses_app_db = PG.connect(dbname: "expenses_app")
+class ExpenseData
+  def initialize
+    @expenses_app_db = PG.connect(dbname: "expenses_app")
+  end
+  
 
-def list(db)
-  response = db.exec("SELECT * FROM expenses ORDER BY created_on DESC;")
+  def list
+    response = @expenses_app_db.exec("SELECT * FROM expenses ORDER BY created_on DESC;")
 
-  response.each do |tuple|
-    puts "#{tuple["id"]} | #{tuple["created_on"]} | #{tuple["amount"].rjust(6,' ')} | #{tuple["memo"]}"
+    response.each do |tuple|
+      puts "#{tuple["id"]} | #{tuple["created_on"]} | #{tuple["amount"].rjust(6,' ')} | #{tuple["memo"]}"
+    end
+  end
+
+  def add_expense(amount, memo)
+    if amount && memo
+      amount = amount.to_f
+      @expenses_app_db.exec_params("INSERT INTO expenses (memo, amount, created_on) VALUES ($1, $2, NOW());", [memo, amount])
+    else
+      puts 'You must provide an amount and memo'
+    end
+  end
+
+  def help
+    "An expense recording system\n" + 
+    "\n" + 
+    "Commands:\n" + 
+    "\n" + 
+    "add AMOUNT MEMO [DATE] - record a new expense\n" +
+    "clear - delete all expenses\n" +
+    "list - list all expenses\n" +
+    "delete NUMBER - remove expense with id NUMBER\n" +
+    "search QUERY - list expenses with a matching memo field"
   end
 end
 
-def add_expense(db, amount, memo)
-  if amount && memo
-    amount = amount.to_f
-    db.exec_params("INSERT INTO expenses (memo, amount, created_on) VALUES ($1, $2, NOW());", [memo, amount])
-  else
-    puts 'You must provide an amount and memo'
+class CLI
+  def initialize
+    @data = ExpenseData.new
+  end
+
+  def run(input)
+    command, param_1, param_2 = input
+
+    case command
+      when 'list' then @data.list
+      when 'add' then @data.add_expense(param_1, param_2)
+      else puts @data.help
+    end
   end
 end
 
-def help
-  "An expense recording system\n" + 
-  "\n" + 
-  "Commands:\n" + 
-  "\n" + 
-  "add AMOUNT MEMO [DATE] - record a new expense\n" +
-  "clear - delete all expenses\n" +
-  "list - list all expenses\n" +
-  "delete NUMBER - remove expense with id NUMBER\n" +
-  "search QUERY - list expenses with a matching memo field"
-end
-
-
-command, param_1, param_2 = ARGV
-
-case command
-  when 'list' then list(expenses_app_db)
-  when 'add' then add_expense(expenses_app_db, param_1, param_2)
-  else puts help
-end
+CLI.new.run(ARGV)
